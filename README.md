@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Invitely — animated e-invitations with ABA PayWay
 
-## Getting Started
+A self-serve e-invitation platform: customers pick a plan, pay with **ABA PayWay** (KHQR / ABA Mobile / cards), receive an access code, design their invitation in a live editor, and share a link — one for everyone or a personal link per guest.
 
-First, run the development server:
+- **Plans:** 💍 Wedding Premium · 💍 Standard · 🎂 Birthday Premium · 🏡 House Warming (`src/lib/plans.ts`)
+- **Templates:** Garden Gate, Royal Gold, Modern Minimal, Birthday Pop, Home Sweet Home (`src/templates/index.ts`)
+- **Bilingual:** Khmer & English on every invitation, Khmer numerals and dates
+- **Animations:** cover reveal, curtain / envelope / fade openings, falling petals / sparkles / confetti, scroll reveals, music after tap
+- **Guests:** personal links (`/i/{slug}?g={token}`), opened tracking, RSVP + wishes, CSV export
+- **Admin:** `/admin` — orders, revenue, access codes, manual confirm, promo codes
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Rename the brand in `src/config/site.ts` and the logo in `src/components/site/Logo.tsx`.
+
+## How the dynamic templates work
+
+```
+Invitation row = { templateId, plan, data (JSON) }
+                        │          │       │
+src/templates ──────────┘          │       └── validated by invitationDataSchema (src/lib/invitation.ts)
+  theme colours, fonts, cover art, │
+  opening animation, particles,    └── src/lib/plans.ts → feature flags & limits
+  section order
+                        ▼
+<InvitationRenderer> (src/components/invitation) renders sections from src/components/invitation/sections.tsx
+— the same component powers the public page, the editor's live preview and the landing-page phone mockup.
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Add a template:** add an object to `TEMPLATES` in `src/templates/index.ts` (pick `cover`, `opening`, `particles`, `sections`, theme colours). For new cover art, add an SVG component in `src/components/invitation/art.tsx`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Add an event type / plan:** add it to `EventType` + `PLANS` in `src/lib/plans.ts`, to `EVENT_TYPES` and `emptyInvitation()` in `src/lib/invitation.ts`, and list it in a template's `eventTypes`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Payment flow (ABA PayWay)
 
-## Learn More
+1. `/create?plan=…` Step 1 → `POST /api/orders` — server validates, prices the plan (+ promo) and creates a `PENDING` order with a unique `tran_id`.
+2. Step 2 → `POST /api/payway/purchase` returns fields signed with HMAC-SHA512 (`src/lib/payway.ts`); the browser posts them to PayWay's hosted checkout.
+3. PayWay calls `POST /api/payway/callback` (`return_url`). The payload is **not trusted** — we call PayWay's `check-transaction-2` and compare the amount before marking the order `PAID` (idempotent).
+4. `/create/status` polls `GET /api/orders/{id}/status` (which also re-checks PayWay), then shows the access code and signs the buyer into the editor.
+5. A daily Vercel Cron (`/api/cron/expire-orders`) re-checks stale pending orders and expires the rest.
 
-To learn more about Next.js, take a look at the following resources:
+> ⚠️ Before going live, compare `PURCHASE_HASH_ORDER` in `src/lib/payway.ts` with the API docs PayWay sends you with your merchant account, and test end-to-end in the sandbox.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Without PayWay keys, local development uses a **simulated payment** (`PAYWAY_MOCK=1`); this is disabled in production.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Run locally
 
-## Deploy on Vercel
+```bash
+pnpm install
+docker run -d --name invitely-db -e POSTGRES_USER=invitely -e POSTGRES_PASSWORD=invitely -e POSTGRES_DB=invitely -p 5544:5432 postgres:16-alpine
+cp .env.example .env        # then edit secrets
+pnpm prisma migrate dev
+pnpm db:seed                # 4 demo invitations + promo WELCOME10
+pnpm dev                    # http://localhost:3000  ·  demo: /i/demo  ·  admin: /admin
+pnpm test
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+To receive real PayWay sandbox callbacks locally, expose the app with a tunnel (`cloudflared tunnel --url http://localhost:3000`) and set `APP_URL` to the tunnel URL.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy to Vercel
+
+1. **Database:** create a Postgres database (Vercel dashboard → Storage → Neon, or neon.tech). Set `DATABASE_URL` (pooled) and `DIRECT_URL` (direct).
+2. **Photos/music:** Vercel dashboard → Storage → Blob → connect to the project (adds `BLOB_READ_WRITE_TOKEN`).
+3. **Environment variables** (Project → Settings → Environment Variables): `APP_URL` (your https domain), `SESSION_SECRET`, `ADMIN_PASSWORD`, `CRON_SECRET`, `PAYWAY_BASE_URL`, `PAYWAY_MERCHANT_ID`, `PAYWAY_API_KEY`, optional `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID`.
+4. **Deploy:** `vercel link` then `vercel --prod` (or import the GitHub repo in Vercel).
+5. **Migrate + seed** the production DB once: `DATABASE_URL=… DIRECT_URL=… pnpm prisma migrate deploy && pnpm db:seed`.
+6. **PayWay:** send ABA your production domain (and Vercel IPs if they ask) to whitelist, then switch `PAYWAY_BASE_URL` to `https://checkout.payway.com.kh` with your production keys.
+
+## Before launch checklist
+
+- [ ] Your brand name, logo, contact links (`src/config/site.ts`)
+- [ ] Real Terms & Privacy text (`src/app/terms`, `src/app/privacy`)
+- [ ] PayWay sandbox test passes end-to-end, then production keys
+- [ ] Cover art / photos you own or have a licence for (demo photos are from Unsplash)
+- [ ] Strong `SESSION_SECRET`, `ADMIN_PASSWORD`, `CRON_SECRET`

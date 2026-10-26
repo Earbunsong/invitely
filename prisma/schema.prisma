@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+enum InvitationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  tranId      String      @unique
+  plan        String
+  eventType   String
+  amount      Decimal     @db.Decimal(10, 2)
+  currency    String      @default("USD")
+  status      OrderStatus @default(PENDING)
+  phone       String
+  eventDate   DateTime
+  promoCode   String?
+  paywayApv   String?
+  paidAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  invitation  Invitation?
+
+  @@index([status, createdAt])
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  orderId        String?          @unique
+  order          Order?           @relation(fields: [orderId], references: [id])
+  slug           String           @unique
+  templateId     String
+  plan           String
+  data           Json
+  status         InvitationStatus @default(DRAFT)
+  accessCode     String? // AES-GCM encrypted, see src/lib/auth.ts
+  phone          String?
+  publishedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  guests         Guest[]
+  wishes         Wish[]
+}
+
+model Guest {
+  id           String     @id @default(cuid())
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  name         String
+  token        String     @unique
+  openedAt     DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([invitationId])
+}
+
+model Wish {
+  id           String     @id @default(cuid())
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  guestToken   String?
+  name         String
+  message      String
+  attending    Boolean?
+  partySize    Int?
+  createdAt    DateTime   @default(now())
+
+  @@index([invitationId, createdAt])
+}
+
+model PromoCode {
+  code       String    @id
+  percentOff Int?
+  amountOff  Decimal?  @db.Decimal(10, 2)
+  maxUses    Int?
+  used       Int       @default(0)
+  expiresAt  DateTime?
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+}
