@@ -13,6 +13,8 @@ export function CoverBackdrop({ art }: { art: CoverArt }) {
       return <Balloons />;
     case "home":
       return <Home />;
+    case "castle":
+      return <Castle />;
   }
 }
 
@@ -254,6 +256,77 @@ function Home() {
         </g>
       ))}
       <rect x="0" y="650" width="400" height="150" fill="#dfe9d6" />
+    </svg>
+  );
+}
+
+function Castle() {
+  const pink = "#f6b8cf";
+  const deep = "#d4477f";
+  const gold = "#e9b949";
+  const wall = "#fff5f9";
+  // Tower: body + cone roof + pennant flag, centred on x.
+  const tower = (x: number, top: number, w: number, roofH: number) => (
+    <g key={`t${x}`}>
+      <rect x={x - w / 2} y={top} width={w} height={760 - top} fill={wall} stroke={pink} strokeWidth="2" />
+      <path d={`M${x - w / 2 - 6} ${top} L ${x} ${top - roofH} L ${x + w / 2 + 6} ${top} Z`} fill={pink} stroke={deep} strokeWidth="1.5" />
+      <line x1={x} y1={top - roofH} x2={x} y2={top - roofH - 26} stroke={gold} strokeWidth="2" />
+      <path d={`M${x} ${top - roofH - 26} L ${x + 18} ${top - roofH - 20} L ${x} ${top - roofH - 14} Z`} fill={deep} />
+      <rect x={x - 7} y={top + 26} width="14" height="22" rx="7" fill={pink} />
+    </g>
+  );
+  const stars = [
+    [40, 70],
+    [110, 140],
+    [330, 60],
+    [360, 170],
+    [70, 250],
+    [300, 240],
+    [200, 40],
+  ];
+  return (
+    <svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 h-full w-full" aria-hidden>
+      <defs>
+        <linearGradient id="pc-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff0f6" />
+          <stop offset="0.6" stopColor="#ffe4ef" />
+          <stop offset="1" stopColor="#fff6ea" />
+        </linearGradient>
+      </defs>
+      <rect width="400" height="800" fill="url(#pc-sky)" />
+      {stars.map(([x, y], i) => (
+        <path
+          key={i}
+          d={`M${x} ${y - 9} L ${x + 2.5} ${y - 2.5} L ${x + 9} ${y} L ${x + 2.5} ${y + 2.5} L ${x} ${y + 9} L ${x - 2.5} ${y + 2.5} L ${x - 9} ${y} L ${x - 2.5} ${y - 2.5} Z`}
+          fill={gold}
+          opacity="0.75"
+        />
+      ))}
+      {/* soft clouds behind the castle */}
+      <ellipse cx="80" cy="560" rx="110" ry="40" fill="#fff" opacity="0.8" />
+      <ellipse cx="330" cy="545" rx="120" ry="44" fill="#fff" opacity="0.8" />
+      {/* castle — scaled down around its base so it sits below the cover text */}
+      <g transform="translate(200 760) scale(0.62) translate(-200 -760)">
+        {tower(75, 560, 46, 70)}
+        {tower(325, 560, 46, 70)}
+        <rect x="110" y="590" width="180" height="170" fill={wall} stroke={pink} strokeWidth="2" />
+        {Array.from({ length: 9 }, (_, i) => (
+          <rect key={i} x={110 + i * 20} y="578" width="12" height="14" fill={wall} stroke={pink} strokeWidth="2" />
+        ))}
+        {tower(150, 500, 40, 60)}
+        {tower(250, 500, 40, 60)}
+        {tower(200, 440, 54, 90)}
+        <path d="M176 760 V 700 A 24 24 0 0 1 224 700 V 760 Z" fill={deep} opacity="0.85" />
+        <circle cx="200" cy="640" r="16" fill={pink} stroke={gold} strokeWidth="2" />
+        <path d="M192 640 L 200 630 L 208 640 L 200 650 Z" fill={gold} />
+      </g>
+      {/* ground with little hearts */}
+      <rect x="0" y="755" width="400" height="45" fill="#f9d3e2" />
+      {[30, 120, 280, 370].map((x) => (
+        <text key={x} x={x} y="785" fontSize="16" fill={deep} opacity="0.6" textAnchor="middle">
+          ♥
+        </text>
+      ))}
     </svg>
   );
 }

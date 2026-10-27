@@ -16,7 +16,7 @@ export type SectionId =
   | "thanks"
   | "footer";
 
-export type CoverArt = "garden-gate" | "royal-frame" | "minimal-line" | "balloons" | "home";
+export type CoverArt = "garden-gate" | "royal-frame" | "minimal-line" | "balloons" | "home" | "castle";
 export type Opening = "curtain" | "envelope" | "fade";
 export type Particles = "petals" | "sparkles" | "confetti" | "hearts" | "none";
 
@@ -167,6 +167,28 @@ export const TEMPLATES: Template[] = [
     particles: "confetti",
     sections: PARTY_SECTIONS,
     swatch: "linear-gradient(160deg,#ffe1ea,#e9ddff 55%,#d9ecff)",
+  },
+  {
+    id: "princess-party",
+    name: "Princess Party",
+    description: "Pink and gold fairy-tale castle with twinkling sparkles.",
+    eventTypes: ["birthday"],
+    theme: {
+      background: "linear-gradient(180deg,#fff0f6 0%,#ffe4ef 55%,#fff6ea 100%)",
+      surface: "rgba(255,255,255,0.9)",
+      text: "#5a2340",
+      muted: "#a0567d",
+      accent: "#d4477f",
+      accentSoft: "#ffe0ec",
+      border: "#f6c6da",
+      display: "script",
+      kmDisplay: "moul",
+    },
+    cover: "castle",
+    opening: "envelope",
+    particles: "sparkles",
+    sections: PARTY_SECTIONS,
+    swatch: "linear-gradient(160deg,#ffe0ec,#f8c8dc 55%,#f6d58e)",
   },
   {
     id: "home-sweet",

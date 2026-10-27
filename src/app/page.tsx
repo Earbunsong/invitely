@@ -12,6 +12,7 @@ const DEMO_BY_TEMPLATE: Record<string, string> = {
   "garden-gate": "demo",
   "royal-gold": "demo-royal",
   "birthday-pop": "demo-birthday",
+  "princess-party": "demo-princess",
   "home-sweet": "demo-house",
 };
 
@@ -87,7 +88,7 @@ export default function Home() {
               <h2 className="font-heading text-3xl font-bold sm:text-4xl">Templates for Every Celebration</h2>
               <p className="mt-3 text-muted">Tap a template to open a live demo — exactly what your guests will see.</p>
             </Reveal>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {TEMPLATES.map((t, i) => {
                 const demo = DEMO_BY_TEMPLATE[t.id];
                 return (
