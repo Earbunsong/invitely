@@ -71,3 +71,12 @@ To receive real PayWay sandbox callbacks locally, expose the app with a tunnel (
 - [ ] PayWay sandbox test passes end-to-end, then production keys
 - [ ] Cover art / photos you own or have a licence for (demo photos are from Unsplash)
 - [ ] Strong `SESSION_SECRET`, `ADMIN_PASSWORD`, `CRON_SECRET`
+
+## Updating the live site
+
+The GitHub repo `Earbunsong/invitely` is connected to the Vercel project `invitely`:
+
+- Push to `main` → Vercel builds and deploys to https://invitely-eta.vercel.app automatically (~1 min).
+- Push any other branch → Vercel builds a preview URL to check before merging.
+- Database schema changes: run `pnpm prisma migrate dev --name <change>` locally, then apply to Neon with
+  `prisma migrate deploy` using the production URLs before (or right after) pushing.
