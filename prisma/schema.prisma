@@ -94,3 +94,21 @@ model PromoCode {
   active     Boolean   @default(true)
   createdAt  DateTime  @default(now())
 }
+
+enum TemplateStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// Templates created in /admin/templates. Built-in templates live in src/templates/index.ts.
+model Template {
+  id          String         @id
+  name        String
+  description String         @default("")
+  eventTypes  String[]
+  config      Json
+  status      TemplateStatus @default(DRAFT)
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}

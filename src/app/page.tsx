@@ -6,7 +6,11 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteNav } from "@/components/site/SiteNav";
 import { site } from "@/config/site";
 import { EVENT_LABELS } from "@/lib/plans";
-import { TEMPLATES } from "@/templates";
+import { listTemplates, mergeTemplates } from "@/lib/templates";
+import { TEMPLATES, templateThumb } from "@/templates";
+
+// Re-built at most every 5 minutes; publishing a template in /admin also refreshes it immediately.
+export const revalidate = 300;
 
 const DEMO_BY_TEMPLATE: Record<string, string> = {
   "garden-gate": "demo",
@@ -30,7 +34,9 @@ const FAQ = [
   { q: "How do I sign in later?", a: "After payment you get an access code. Sign in with your phone number and that code to keep editing." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  // If the database is unreachable (e.g. cold start during a build), still show the built-in templates.
+  const templates = await listTemplates().catch(() => mergeTemplates(TEMPLATES, []));
   return (
     <>
       <SiteNav />
@@ -89,12 +95,12 @@ export default function Home() {
               <p className="mt-3 text-muted">Tap a template to open a live demo — exactly what your guests will see.</p>
             </Reveal>
             <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              {TEMPLATES.map((t, i) => {
+              {templates.map((t, i) => {
                 const demo = DEMO_BY_TEMPLATE[t.id];
                 return (
                   <Reveal key={t.id} delay={i * 0.08}>
                     <a href={demo ? `/i/${demo}` : undefined} target="_blank" className="group block overflow-hidden rounded-3xl bg-white shadow-md ring-1 ring-black/5 transition hover:-translate-y-1 hover:shadow-xl">
-                      <div className="flex aspect-[3/4] items-center justify-center text-5xl transition group-hover:scale-105" style={{ background: t.swatch }}>
+                      <div className="flex aspect-[3/4] items-center justify-center text-5xl transition group-hover:scale-105" style={{ background: templateThumb(t) }}>
                         {EVENT_LABELS[t.eventTypes[0]].emoji}
                       </div>
                       <div className="p-4">

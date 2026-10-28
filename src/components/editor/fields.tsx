@@ -43,7 +43,8 @@ async function resizeImage(file: File, max = 1600): Promise<Blob> {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? file), "image/jpeg", 0.85));
 }
 
-export function useUploader() {
+/** `fields` are extra form values, e.g. { invitationId } for admin uploads or { scope: "template" }. */
+export function useUploader(fields: Record<string, string> = {}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const upload = async (file: File, kind: "image" | "audio"): Promise<string | null> => {
@@ -56,6 +57,7 @@ export function useUploader() {
         body.append("file", new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
       } else body.append("file", file);
       body.append("kind", kind);
+      for (const [k, v] of Object.entries(fields)) body.append(k, v);
       const res = await fetch("/api/upload", { method: "POST", body });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? "Upload failed");
@@ -70,9 +72,23 @@ export function useUploader() {
   return { upload, busy, error };
 }
 
-export function UploadButton({ label, accept, kind, onUploaded, multiple = false }: { label: string; accept: string; kind: "image" | "audio"; onUploaded: (url: string) => void; multiple?: boolean }) {
+export function UploadButton({
+  label,
+  accept,
+  kind,
+  onUploaded,
+  multiple = false,
+  fields,
+}: {
+  label: string;
+  accept: string;
+  kind: "image" | "audio";
+  onUploaded: (url: string) => void;
+  multiple?: boolean;
+  fields?: Record<string, string>;
+}) {
   const ref = useRef<HTMLInputElement>(null);
-  const { upload, busy, error } = useUploader();
+  const { upload, busy, error } = useUploader(fields);
   return (
     <div>
       <input

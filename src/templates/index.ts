@@ -1,24 +1,15 @@
 import type { EventType } from "@/lib/plans";
 
-export type SectionId =
-  | "details"
-  | "calendar"
-  | "hero"
-  | "parents"
-  | "countdown"
-  | "story"
-  | "gallery"
-  | "map"
-  | "schedule"
-  | "dresscode"
-  | "gift"
-  | "wishes"
-  | "thanks"
-  | "footer";
+export type SectionId = (typeof SECTION_IDS)[number];
 
-export type CoverArt = "garden-gate" | "royal-frame" | "minimal-line" | "balloons" | "home" | "castle";
-export type Opening = "curtain" | "envelope" | "fade";
-export type Particles = "petals" | "sparkles" | "confetti" | "hearts" | "none";
+export const COVER_ARTS = ["garden-gate", "royal-frame", "minimal-line", "balloons", "home", "castle"] as const;
+/** Built-in SVG art, or "image" for an uploaded cover image (admin-made templates). */
+export type CoverArt = (typeof COVER_ARTS)[number] | "image";
+export const OPENINGS = ["curtain", "envelope", "fade"] as const;
+export const PARTICLES = ["petals", "sparkles", "confetti", "hearts", "none"] as const;
+export const SECTION_IDS = ["details", "calendar", "hero", "parents", "countdown", "story", "gallery", "map", "schedule", "dresscode", "gift", "wishes", "thanks", "footer"] as const;
+export type Opening = (typeof OPENINGS)[number];
+export type Particles = (typeof PARTICLES)[number];
 
 export type Template = {
   id: string;
@@ -40,6 +31,8 @@ export type Template = {
     kmDisplay: "moul" | "kantumruy";
   };
   cover: CoverArt;
+  /** Used when cover is "image". */
+  coverImage?: string;
   opening: Opening;
   particles: Particles;
   sections: SectionId[];
@@ -47,7 +40,7 @@ export type Template = {
   swatch: string;
 };
 
-const WEDDING_SECTIONS: SectionId[] = [
+export const WEDDING_SECTIONS: SectionId[] = [
   "details",
   "calendar",
   "hero",
@@ -64,7 +57,7 @@ const WEDDING_SECTIONS: SectionId[] = [
   "footer",
 ];
 
-const PARTY_SECTIONS: SectionId[] = [
+export const PARTY_SECTIONS: SectionId[] = [
   "details",
   "hero",
   "countdown",
@@ -214,6 +207,11 @@ export const TEMPLATES: Template[] = [
   },
 ];
 
+/** Card/thumbnail background: the uploaded cover image if there is one, else the swatch. */
+export function templateThumb(t: Pick<Template, "swatch" | "cover" | "coverImage">): string {
+  return t.cover === "image" && t.coverImage ? `center / cover no-repeat url("${t.coverImage.replace(/"/g, "")}")` : t.swatch;
+}
+
 export function getTemplate(id: string | null | undefined): Template {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
 }
@@ -222,6 +220,8 @@ export function templatesFor(eventType: EventType): Template[] {
   return TEMPLATES.filter((t) => t.eventTypes.includes(eventType));
 }
 
+/** Starting/fallback template: prefers designs made for this event type over all-purpose ones (e.g. Birthday Pop over Modern Minimal). */
 export function defaultTemplateFor(eventType: EventType): Template {
-  return templatesFor(eventType)[0] ?? TEMPLATES[0];
+  const candidates = templatesFor(eventType);
+  return [...candidates].sort((a, b) => a.eventTypes.length - b.eventTypes.length)[0] ?? TEMPLATES[0];
 }

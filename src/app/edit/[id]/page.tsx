@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { Editor } from "@/components/editor/Editor";
+import { isAdmin } from "@/lib/auth";
 import { parseInvitationData } from "@/lib/invitation";
 import { ownedInvitation } from "@/lib/owner";
 import { getPlan } from "@/lib/plans";
-import { templatesFor } from "@/templates";
+import { listTemplates, pickTemplate } from "@/lib/templates";
 
 export const metadata = { title: "Edit invitation" };
 
@@ -14,16 +15,19 @@ export default async function EditPage({ params }: { params: Promise<{ id: strin
   const plan = getPlan(inv.plan);
   if (!plan) redirect("/login");
   const data = parseInvitationData(inv.data);
+  const templates = await listTemplates({ eventType: data.eventType });
   return (
     <Editor
       invitationId={inv.id}
       slug={inv.slug}
       initialStatus={inv.status}
       initialData={data}
-      initialTemplateId={inv.templateId}
+      // If the saved template was unpublished or removed, start from the default for this event type.
+      initialTemplateId={pickTemplate(inv.templateId, data.eventType, templates).id}
       plan={plan}
-      templateIds={templatesFor(data.eventType).map((t) => t.id)}
+      templates={templates}
       appUrl={process.env.APP_URL || ""}
+      admin={await isAdmin()}
     />
   );
 }

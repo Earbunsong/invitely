@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { invitationDataSchema } from "@/lib/invitation";
+import { invitationDataSchema, type InvitationData } from "@/lib/invitation";
 import { ownedInvitation } from "@/lib/owner";
 import { getPlan } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
-import { getTemplate } from "@/templates";
+import { listTemplates } from "@/lib/templates";
 
 const body = z.object({
   data: invitationDataSchema.optional(),
@@ -37,12 +37,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     update.data = data as unknown as Prisma.InputJsonValue;
   }
   if (parsed.data.templateId) {
-    const tpl = getTemplate(parsed.data.templateId);
-    const eventType = parsed.data.data?.eventType ?? (inv.data as { eventType: string }).eventType;
-    if (tpl.id !== parsed.data.templateId || !tpl.eventTypes.includes(eventType as never)) {
+    const eventType = (parsed.data.data?.eventType ?? (inv.data as { eventType: string }).eventType) as InvitationData["eventType"];
+    const allowed = await listTemplates({ eventType });
+    if (!allowed.some((t) => t.id === parsed.data.templateId)) {
       return NextResponse.json({ error: "That template is not available for this event." }, { status: 400 });
     }
-    update.templateId = tpl.id;
+    update.templateId = parsed.data.templateId;
   }
   if (parsed.data.publish) {
     update.status = "PUBLISHED";

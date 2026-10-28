@@ -2,20 +2,20 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { InvitationRenderer } from "@/components/invitation/InvitationRenderer";
-import { getSessionInvitationId } from "@/lib/auth";
+import { getSessionInvitationId, isAdmin } from "@/lib/auth";
 import { parseInvitationData, t } from "@/lib/invitation";
 import { formatLongDate } from "@/lib/i18n";
 import { getPlan, PLANS } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
-import { getTemplate } from "@/templates";
+import { resolveTemplate } from "@/lib/templates";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ g?: string }> };
 
 const load = cache(async (slug: string) => {
   const inv = await prisma.invitation.findUnique({ where: { slug } });
   if (!inv) return null;
-  // Drafts are visible only to their owner (to preview before publishing).
-  if (inv.status !== "PUBLISHED" && (await getSessionInvitationId()) !== inv.id) return null;
+  // Drafts are visible only to their owner and the admin (to preview before publishing).
+  if (inv.status !== "PUBLISHED" && (await getSessionInvitationId()) !== inv.id && !(await isAdmin())) return null;
   return inv;
 });
 
@@ -52,10 +52,11 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   }
 
   const plan = getPlan(inv.plan) ?? PLANS["wedding-premium"];
+  const data = parseInvitationData(inv.data);
   return (
     <InvitationRenderer
-      data={parseInvitationData(inv.data)}
-      template={getTemplate(inv.templateId)}
+      data={data}
+      template={await resolveTemplate(inv.templateId, data.eventType)}
       features={plan.features}
       slug={inv.slug}
       guestName={guest?.name}

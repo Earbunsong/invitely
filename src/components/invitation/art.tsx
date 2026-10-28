@@ -15,6 +15,8 @@ export function CoverBackdrop({ art }: { art: CoverArt }) {
       return <Home />;
     case "castle":
       return <Castle />;
+    case "image":
+      return null; // rendered by the cover itself from template.coverImage
   }
 }
 

@@ -107,7 +107,12 @@ function Cover({ onOpen }: { onOpen: () => void }) {
       {/* Art stays phone-width on large screens; the theme background fills the sides. */}
       <div className="absolute inset-0" style={{ background: "var(--iv-bg)" }} />
       <div className="absolute inset-y-0 left-1/2 w-full max-w-[480px] -translate-x-1/2 overflow-hidden">
-        <CoverBackdrop art={template.cover} />
+        {template.cover === "image" && template.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={template.coverImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <CoverBackdrop art={template.cover} />
+        )}
         {/* Soft glow behind the text so it stays legible over any art or screen shape. */}
         <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 75% 45% at 50% 32%, var(--iv-surface) 0%, transparent 100%)" }} />
       </div>

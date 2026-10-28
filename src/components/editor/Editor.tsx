@@ -6,7 +6,7 @@ import { InvitationRenderer } from "@/components/invitation/InvitationRenderer";
 import { Logo } from "@/components/site/Logo";
 import { SCHEDULE_ICONS, type InvitationData } from "@/lib/invitation";
 import type { Plan } from "@/lib/plans";
-import { getTemplate } from "@/templates";
+import { templateThumb, type Template } from "@/templates";
 import { Field, inputCls, LInput, UploadButton } from "./fields";
 import { GuestsPanel } from "./GuestsPanel";
 
@@ -32,8 +32,11 @@ export function Editor(props: {
   initialData: InvitationData;
   initialTemplateId: string;
   plan: Plan;
-  templateIds: string[];
+  /** Templates available for this event type (built-in + published custom ones). */
+  templates: Template[];
   appUrl: string;
+  /** Opened by the admin from /admin. */
+  admin?: boolean;
 }) {
   const { invitationId, slug, plan } = props;
   const [data, setData] = useState<InvitationData>(props.initialData);
@@ -78,7 +81,7 @@ export function Editor(props: {
     return true;
   };
 
-  const template = getTemplate(templateId);
+  const template = props.templates.find((t) => t.id === templateId) ?? props.templates[0];
   const origin = props.appUrl || (typeof window !== "undefined" ? window.location.origin : "");
   const publicUrl = `${origin}/i/${slug}`;
   const couple = data.eventType === "wedding" || data.eventType === "engagement";
@@ -91,6 +94,11 @@ export function Editor(props: {
             <Logo />
           </Link>
           <span className={`hidden rounded-full px-2 py-0.5 text-[11px] font-bold sm:inline ${status === "PUBLISHED" ? "bg-sage-soft text-sage-dark" : "bg-amber-100 text-amber-800"}`}>{status === "PUBLISHED" ? "Published" : "Draft"}</span>
+          {props.admin && (
+            <a href="/admin" className="rounded-full bg-ink px-2.5 py-0.5 text-[11px] font-bold text-white">
+              Admin · back to dashboard
+            </a>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setMobilePreview((m) => !m)} className="rounded-full border px-3 py-1.5 text-sm lg:hidden">
@@ -119,11 +127,11 @@ export function Editor(props: {
               <>
                 <Field label="Template">
                   <div className="grid grid-cols-2 gap-3">
-                    {props.templateIds.map((id) => {
-                      const t = getTemplate(id);
+                    {props.templates.map((t) => {
+                      const id = t.id;
                       return (
                         <button key={id} onClick={() => setTemplateId(id)} className={`overflow-hidden rounded-2xl border-2 text-left ${templateId === id ? "border-sage ring-2 ring-sage/30" : "border-transparent"}`}>
-                          <div className="h-24" style={{ background: t.swatch }} />
+                          <div className="h-24" style={{ background: templateThumb(t) }} />
                           <div className="bg-white p-2">
                             <p className="text-sm font-semibold">{t.name}</p>
                             <p className="text-[11px] text-muted">{t.description}</p>
@@ -282,7 +290,7 @@ export function Editor(props: {
                   ))}
                 </div>
                 {data.photos.length < plan.limits.photos && (
-                  <UploadButton
+                  <UploadButton fields={{ invitationId }}
                     label="+ Upload photos"
                     accept="image/jpeg,image/png,image/webp"
                     kind="image"
@@ -325,7 +333,7 @@ export function Editor(props: {
                         </button>
                       </div>
                     ) : (
-                      <UploadButton label="+ Upload music" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac" kind="audio" onUploaded={(url) => set("musicUrl", url)} />
+                      <UploadButton fields={{ invitationId }} label="+ Upload music" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac" kind="audio" onUploaded={(url) => set("musicUrl", url)} />
                     )}
                   </Field>
                 )}
@@ -341,7 +349,7 @@ export function Editor(props: {
                         </button>
                       </div>
                     ) : (
-                      <UploadButton label="+ Upload your KHQR image" accept="image/jpeg,image/png,image/webp" kind="image" onUploaded={(url) => set("gift", { qrUrl: url, note: data.gift?.note ?? { en: "", km: "" } })} />
+                      <UploadButton fields={{ invitationId }} label="+ Upload your KHQR image" accept="image/jpeg,image/png,image/webp" kind="image" onUploaded={(url) => set("gift", { qrUrl: url, note: data.gift?.note ?? { en: "", km: "" } })} />
                     )}
                     {data.gift?.qrUrl && <LInput label="Note under the QR" value={data.gift.note} onChange={(v) => set("gift", { ...data.gift!, note: v })} />}
                   </div>
