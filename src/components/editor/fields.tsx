@@ -43,27 +43,57 @@ async function resizeImage(file: File, max = 1600): Promise<Blob> {
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? file), "image/jpeg", 0.85));
 }
 
-/** `fields` are extra form values, e.g. { invitationId } for admin uploads or { scope: "template" }. */
+const MAX_BYTES: Record<"image" | "audio", number> = { image: 8 * 1024 * 1024, audio: 12 * 1024 * 1024 };
+
+/** Whether the server can hand out direct-to-Blob upload tokens (production). Cached per page load. */
+let directUploadCheck: Promise<boolean> | null = null;
+function canUploadDirect(): Promise<boolean> {
+  directUploadCheck ??= fetch("/api/upload/token")
+    .then((r) => (r.ok ? r.json() : { direct: false }))
+    .then((j) => Boolean(j.direct))
+    .catch(() => false);
+  return directUploadCheck;
+}
+
+/**
+ * Uploads a photo or song. In production the file goes straight from the browser to Vercel Blob
+ * (the server only issues a checked, short-lived token), avoiding Vercel's 4.5 MB request limit.
+ * In local dev it is posted to /api/upload and saved under public/uploads.
+ * `fields` are extra values, e.g. { invitationId } for editor uploads or { scope: "template" } for admin.
+ */
 export function useUploader(fields: Record<string, string> = {}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const upload = async (file: File, kind: "image" | "audio"): Promise<string | null> => {
+  const upload = async (original: File, kind: "image" | "audio"): Promise<string | null> => {
     setBusy(true);
     setError("");
     try {
+      const file = kind === "image" ? new File([await resizeImage(original)], original.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : original;
+      if (file.size > MAX_BYTES[kind]) throw new Error(`File too large (max ${MAX_BYTES[kind] / 1024 / 1024} MB)`);
+
+      if (await canUploadDirect()) {
+        const { upload: uploadToBlob } = await import("@vercel/blob/client");
+        const folder = fields.scope === "template" ? "templates" : `inv/${fields.invitationId ?? "unknown"}`;
+        const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
+        const blob = await uploadToBlob(`${folder}/${kind}.${ext}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload/token",
+          contentType: file.type,
+          clientPayload: JSON.stringify({ kind, ...fields }),
+        });
+        return blob.url;
+      }
+
       const body = new FormData();
-      if (kind === "image") {
-        const blob = await resizeImage(file);
-        body.append("file", new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
-      } else body.append("file", file);
+      body.append("file", file);
       body.append("kind", kind);
       for (const [k, v] of Object.entries(fields)) body.append(k, v);
       const res = await fetch("/api/upload", { method: "POST", body });
-      const j = await res.json();
+      const j = await res.json().catch(() => ({ error: res.status === 413 ? "File too large for the server" : `Upload failed (${res.status})` }));
       if (!res.ok) throw new Error(j.error ?? "Upload failed");
       return j.url as string;
     } catch (e) {
-      setError((e as Error).message);
+      setError((e as Error).message || "Upload failed");
       return null;
     } finally {
       setBusy(false);
