@@ -40,21 +40,17 @@ export function InvitationRenderer({ data, template, features, slug, guestName, 
   const photos = [data.coverPhoto, ...data.photos].filter(Boolean);
   const music = effectiveMusic(data, template, features.music);
 
-  const open = () => {
-    const a = audioRef.current;
-    if (a && music) {
-      a.volume = 0.6;
-      a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    }
-    setStage("opening");
-  };
+  // Music never starts on its own: the guest turns it on (and off) with the music button.
+  const open = () => setStage("opening");
   const finishOpening = useCallback(() => setStage("open"), []);
 
   const toggleMusic = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (a.paused) a.play().then(() => setPlaying(true)).catch(() => undefined);
-    else {
+    if (a.paused) {
+      a.volume = 0.6;
+      a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    } else {
       a.pause();
       setPlaying(false);
     }
@@ -183,11 +179,24 @@ function TopBar({ locale, setLocale, hasMusic, playing, onToggleMusic }: { local
           onClick={onToggleMusic}
           className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full shadow-md backdrop-blur"
           style={{ background: "var(--iv-surface)", border: "1px solid var(--iv-border)" }}
-          aria-label={playing ? "Pause music" : "Play music"}
+          aria-label={playing ? "Turn music off" : "Turn music on"}
+          aria-pressed={playing}
+          title={playing ? "Music on — tap to stop" : "Music off — tap to play"}
         >
-          <motion.span animate={playing ? { rotate: 360 } : { rotate: 0 }} transition={playing ? { repeat: Infinity, duration: 4, ease: "linear" } : {}} className="iv-accent">
-            {playing ? "♫" : "♪"}
-          </motion.span>
+          <svg viewBox="0 0 24 24" className="iv-accent h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor" fillOpacity="0.15" />
+            {playing ? (
+              <>
+                <motion.path d="M15.5 8.5a5 5 0 0 1 0 7" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1.4 }} />
+                <motion.path d="M18.5 5.5a9 9 0 0 1 0 13" animate={{ opacity: [0.2, 0.9, 0.2] }} transition={{ repeat: Infinity, duration: 1.4, delay: 0.3 }} />
+              </>
+            ) : (
+              <>
+                <path d="m16 9 5 6" />
+                <path d="m21 9-5 6" />
+              </>
+            )}
+          </svg>
         </button>
       )}
     </div>

@@ -326,7 +326,7 @@ export function Editor(props: {
                 {plan.features.music && (
                   <div className="space-y-2 rounded-2xl bg-white p-4">
                     <p className="text-xs font-bold uppercase tracking-wider text-sage">Background music</p>
-                    <p className="text-[11px] text-muted">Plays after the guest taps Open. Guests can pause it with the ♪ button.</p>
+                    <p className="text-[11px] text-muted">Off by default. Guests tap the speaker button at the top right to play it, and tap again to stop.</p>
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" checked={data.musicOff} onChange={(e) => set("musicOff", e.target.checked)} className="h-4 w-4 accent-[#6b8f71]" />
                       No background music
