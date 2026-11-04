@@ -7,6 +7,7 @@ import { templateThumb } from "@/templates";
 import { AdminLoginForm } from "../LoginForm";
 import { duplicateTemplate, setTemplateStatus } from "./actions";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
+import { TemplateMusicControl } from "./TemplateMusicControl";
 
 export const metadata = { title: "Templates · Admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -50,6 +51,10 @@ export default async function AdminTemplatesPage() {
               </div>
               <p className="text-xs text-muted">{t.eventTypes.map((e) => `${EVENT_LABELS[e].emoji} ${EVENT_LABELS[e].en}`).join(" · ")}</p>
               <p className="text-xs text-muted">Used by {used.get(t.id) ?? 0} invitation(s)</p>
+              <div className="rounded-xl bg-neutral-50 p-2">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">Default music</p>
+                <TemplateMusicControl templateId={t.id} initialUrl={t.music} />
+              </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 {t.source === "custom" && (
                   <>

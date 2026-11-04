@@ -45,6 +45,8 @@ export const invitationDataSchema = z.object({
   colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)).max(8).default([]),
   dressCode: L.optional(),
   musicUrl: url.default(""),
+  /** The client turned background music off (also disables the template's default music). */
+  musicOff: z.boolean().default(false),
   gift: z.object({ qrUrl: url.default(""), note: L }).optional(),
   /** Template-specific opening animation override (premium plans only). */
   opening: z.enum(["curtain", "envelope", "fade"]).optional(),
@@ -54,6 +56,12 @@ export const invitationDataSchema = z.object({
 export type InvitationData = z.infer<typeof invitationDataSchema>;
 
 export type Locale = "en" | "km";
+
+/** What plays: nothing if turned off or not in the plan, else the client's own song, else the template's default. */
+export function effectiveMusic(data: Pick<InvitationData, "musicUrl" | "musicOff">, template: { music?: string }, musicAllowed: boolean): string {
+  if (!musicAllowed || data.musicOff) return "";
+  return data.musicUrl || template.music || "";
+}
 
 export function t(text: LText | undefined, locale: Locale): string {
   if (!text) return "";

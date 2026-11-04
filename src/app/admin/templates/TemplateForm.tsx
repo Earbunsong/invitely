@@ -11,6 +11,7 @@ import { EVENT_LABELS, PLANS, type EventType } from "@/lib/plans";
 import type { TemplateConfig, TemplateStatus } from "@/lib/templates";
 import { COVER_ARTS, OPENINGS, PARTICLES, SECTION_IDS, type SectionId, type Template } from "@/templates";
 import { saveTemplate } from "./actions";
+import { TemplateMusicControl } from "./TemplateMusicControl";
 
 type Meta = { id: string; name: string; description: string; eventTypes: EventType[] };
 
@@ -53,11 +54,12 @@ function ColorField({ label, hint, value, onChange }: { label: string; hint?: st
   );
 }
 
-export function TemplateForm({ initial, isNew }: { initial: { meta: Meta; config: TemplateConfig; status: TemplateStatus }; isNew: boolean }) {
+export function TemplateForm({ initial, isNew }: { initial: { meta: Meta; config: TemplateConfig; status: TemplateStatus; music?: string }; isNew: boolean }) {
   const router = useRouter();
   const [meta, setMeta] = useState<Meta>(initial.meta);
   const [config, setConfig] = useState<TemplateConfig>(initial.config);
   const [status, setStatus] = useState<TemplateStatus>(initial.status);
+  const [music, setMusic] = useState<string | undefined>(initial.music);
   const [previewEvent, setPreviewEvent] = useState<EventType>(initial.meta.eventTypes[0] ?? "wedding");
   const [previewKey, setPreviewKey] = useState(0);
   const [showCover, setShowCover] = useState(true);
@@ -70,7 +72,7 @@ export function TemplateForm({ initial, isNew }: { initial: { meta: Meta; config
 
   const eventForPreview = meta.eventTypes.includes(previewEvent) ? previewEvent : (meta.eventTypes[0] ?? "wedding");
   const sample = useMemo(() => sampleInvitation(eventForPreview), [eventForPreview]);
-  const template: Template = { ...config, id: meta.id || "preview", name: meta.name, description: meta.description, eventTypes: meta.eventTypes };
+  const template: Template = { ...config, music, id: meta.id || "preview", name: meta.name, description: meta.description, eventTypes: meta.eventTypes };
 
   const disabledSections = SECTION_IDS.filter((s) => !config.sections.includes(s));
   const moveSection = (i: number, dir: -1 | 1) => {
@@ -196,6 +198,16 @@ export function TemplateForm({ initial, isNew }: { initial: { meta: Meta; config
                 </select>
               </Field>
             </div>
+          </section>
+
+          <section className="space-y-2 rounded-2xl bg-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-sage">Background music</p>
+            <p className="text-[11px] text-muted">Plays on every invitation using this template, unless the client uploads their own song or turns music off. Only use music you have the rights to.</p>
+            {isNew ? (
+              <p className="text-xs text-muted">Save the template first (draft is fine), then add a song here.</p>
+            ) : (
+              <TemplateMusicControl templateId={meta.id} initialUrl={music} onChange={setMusic} />
+            )}
           </section>
 
           <section className="space-y-3 rounded-2xl bg-white p-4">

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { isBuiltinTemplate, listTemplates, templateConfigSchema, templateMetaSchema, type TemplateStatus } from "@/lib/templates";
+import { isBuiltinTemplate, listTemplates, musicUrlSchema, templateConfigSchema, templateMetaSchema, type TemplateStatus } from "@/lib/templates";
 
 async function requireAdmin() {
   if (!(await isAdmin())) redirect("/admin");
@@ -76,6 +76,7 @@ export async function duplicateTemplate(form: FormData) {
       status: "DRAFT",
     },
   });
+  if (source.music) await prisma.templateMusic.create({ data: { templateId: id, url: source.music } });
   refresh();
   redirect(`/admin/templates/${id}`);
 }
@@ -86,6 +87,23 @@ export async function deleteTemplate(_prev: string | null, form: FormData): Prom
   const inUse = await prisma.invitation.count({ where: { templateId: id } });
   if (inUse > 0) return `In use by ${inUse} invitation${inUse > 1 ? "s" : ""} — unpublish it instead.`;
   await prisma.template.deleteMany({ where: { id } });
+  await prisma.templateMusic.deleteMany({ where: { templateId: id } });
   refresh();
   return null;
+}
+
+/** Set (url) or clear (null) the default music for any template, built-in or custom. */
+export async function setTemplateMusic(templateId: string, url: string | null): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const exists = isBuiltinTemplate(templateId) || (await prisma.template.count({ where: { id: templateId } })) > 0;
+  if (!exists) return { ok: false, error: "Save the template first." };
+  if (url === null) {
+    await prisma.templateMusic.deleteMany({ where: { templateId } });
+  } else {
+    const parsed = musicUrlSchema.safeParse(url);
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    await prisma.templateMusic.upsert({ where: { templateId }, update: { url: parsed.data }, create: { templateId, url: parsed.data } });
+  }
+  refresh(templateId);
+  return { ok: true };
 }

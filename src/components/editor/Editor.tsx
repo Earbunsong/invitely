@@ -324,18 +324,47 @@ export function Editor(props: {
                 </Field>
                 {plan.features.dressCode && <LInput label="Dress code (optional)" value={data.dressCode} onChange={(v) => set("dressCode", v)} />}
                 {plan.features.music && (
-                  <Field label="Background music" hint="MP3 / M4A up to 12 MB. Plays after the guest taps Open.">
-                    {data.musicUrl ? (
-                      <div className="flex items-center gap-2">
-                        <audio src={data.musicUrl} controls className="h-9 flex-1" />
-                        <button onClick={() => set("musicUrl", "")} className="text-xs text-red-600">
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <UploadButton fields={{ invitationId }} label="+ Upload music" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac" kind="audio" onUploaded={(url) => set("musicUrl", url)} />
-                    )}
-                  </Field>
+                  <div className="space-y-2 rounded-2xl bg-white p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-sage">Background music</p>
+                    <p className="text-[11px] text-muted">Plays after the guest taps Open. Guests can pause it with the ♪ button.</p>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={data.musicOff} onChange={(e) => set("musicOff", e.target.checked)} className="h-4 w-4 accent-[#6b8f71]" />
+                      No background music
+                    </label>
+                    {!data.musicOff &&
+                      (data.musicUrl ? (
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold">Your song</p>
+                          <div className="flex items-center gap-2">
+                            <audio src={data.musicUrl} controls className="h-9 flex-1" />
+                            <button onClick={() => set("musicUrl", "")} className="text-xs text-red-600">
+                              Remove
+                            </button>
+                          </div>
+                          {template.music && <p className="text-[11px] text-muted">Remove it to go back to the template&apos;s song.</p>}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {template.music ? (
+                            <>
+                              <p className="text-xs">
+                                <span className="font-semibold">{template.name}</span> plays this song by default:
+                              </p>
+                              <audio src={template.music} controls className="h-9 w-full" />
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted">This template has no default song.</p>
+                          )}
+                          <UploadButton
+                            fields={{ invitationId }}
+                            label={template.music ? "+ Use my own song instead (MP3/M4A, max 12 MB)" : "+ Upload music (MP3/M4A, max 12 MB)"}
+                            accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac"
+                            kind="audio"
+                            onUploaded={(url) => set("musicUrl", url)}
+                          />
+                        </div>
+                      ))}
+                  </div>
                 )}
                 {plan.features.gift && (
                   <div className="space-y-3 rounded-2xl bg-white p-4">

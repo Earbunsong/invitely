@@ -33,6 +33,8 @@ export type Template = {
   cover: CoverArt;
   /** Used when cover is "image". */
   coverImage?: string;
+  /** Default background music (set in /admin/templates). Invitations use it unless the client uploads their own. */
+  music?: string;
   opening: Opening;
   particles: Particles;
   sections: SectionId[];

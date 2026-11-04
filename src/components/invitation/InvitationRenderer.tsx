@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { InvitationData, Locale } from "@/lib/invitation";
-import { t } from "@/lib/invitation";
+import { effectiveMusic, t } from "@/lib/invitation";
 import { formatLongDate, ui } from "@/lib/i18n";
 import type { Plan } from "@/lib/plans";
 import type { Template } from "@/templates";
@@ -38,10 +38,11 @@ export function InvitationRenderer({ data, template, features, slug, guestName, 
 
   const opening = features.openingChoice && data.opening ? data.opening : template.opening;
   const photos = [data.coverPhoto, ...data.photos].filter(Boolean);
+  const music = effectiveMusic(data, template, features.music);
 
   const open = () => {
     const a = audioRef.current;
-    if (a && data.musicUrl) {
+    if (a && music) {
       a.volume = 0.6;
       a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
     }
@@ -74,10 +75,10 @@ export function InvitationRenderer({ data, template, features, slug, guestName, 
   return (
     <Ctx.Provider value={ctx}>
       <div className={`iv-root relative overflow-x-hidden ${locale === "km" ? "km" : ""}`} style={style} lang={locale}>
-        {data.musicUrl && <audio ref={audioRef} src={data.musicUrl} loop preload="none" />}
+        {music && <audio ref={audioRef} src={music} loop preload="none" />}
         <Particles kind={template.particles} count={template.particles === "sparkles" ? 26 : 14} />
 
-        <TopBar locale={locale} setLocale={setLocale} hasMusic={Boolean(data.musicUrl)} playing={playing} onToggleMusic={toggleMusic} />
+        <TopBar locale={locale} setLocale={setLocale} hasMusic={Boolean(music)} playing={playing} onToggleMusic={toggleMusic} />
 
         <AnimatePresence>{stage === "cover" && <Cover key="cover" onOpen={open} />}</AnimatePresence>
         <Opening kind={opening} playing={stage === "opening"} photos={photos} onDone={finishOpening} />

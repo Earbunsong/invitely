@@ -112,3 +112,10 @@ model Template {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 }
+
+/// Default background music per template (built-in or custom). Invitations play it unless the client uploads their own.
+model TemplateMusic {
+  templateId String   @id
+  url        String
+  updatedAt  DateTime @updatedAt
+}

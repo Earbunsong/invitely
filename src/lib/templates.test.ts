@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { defaultTemplateFor, getTemplate, PARTY_SECTIONS, TEMPLATES } from "@/templates";
 import { sampleInvitation } from "./demo-invitations";
-import { invitationDataSchema } from "./invitation";
-import { mergeTemplates, pickTemplate, templateConfigSchema, templateMetaSchema } from "./templates";
+import { effectiveMusic, invitationDataSchema } from "./invitation";
+import { mergeTemplates, musicUrlSchema, pickTemplate, templateConfigSchema, templateMetaSchema } from "./templates";
 
 const base = getTemplate("modern-minimal");
 const validConfig = {
@@ -88,5 +88,30 @@ describe("sampleInvitation", () => {
       expect(d.eventType).toBe(et);
       expect(invitationDataSchema.safeParse(d).success).toBe(true);
     }
+  });
+});
+
+describe("default music", () => {
+  it("attaches default music to built-in and custom templates", () => {
+    const merged = mergeTemplates(TEMPLATES, [row("party", "PUBLISHED")], {}, { "garden-gate": "https://x/song.mp3", party: "/uploads/templates/p.mp3" });
+    expect(merged.find((t) => t.id === "garden-gate")?.music).toBe("https://x/song.mp3");
+    expect(merged.find((t) => t.id === "party")?.music).toBe("/uploads/templates/p.mp3");
+    expect(merged.find((t) => t.id === "royal-gold")?.music).toBeUndefined();
+  });
+
+  it("client song > template default > silence; off switch and plan flag win", () => {
+    const tpl = { music: "https://x/default.mp3" };
+    expect(effectiveMusic({ musicUrl: "", musicOff: false }, tpl, true)).toBe("https://x/default.mp3");
+    expect(effectiveMusic({ musicUrl: "https://x/mine.mp3", musicOff: false }, tpl, true)).toBe("https://x/mine.mp3");
+    expect(effectiveMusic({ musicUrl: "https://x/mine.mp3", musicOff: true }, tpl, true)).toBe("");
+    expect(effectiveMusic({ musicUrl: "", musicOff: false }, {}, true)).toBe("");
+    expect(effectiveMusic({ musicUrl: "", musicOff: false }, tpl, false)).toBe("");
+  });
+
+  it("only accepts uploaded music URLs", () => {
+    expect(musicUrlSchema.safeParse("https://abc.public.blob.vercel-storage.com/templates/a.mp3").success).toBe(true);
+    expect(musicUrlSchema.safeParse("/uploads/templates/a.mp3").success).toBe(true);
+    expect(musicUrlSchema.safeParse("http://insecure.example/a.mp3").success).toBe(false);
+    expect(musicUrlSchema.safeParse("javascript:alert(1)").success).toBe(false);
   });
 });

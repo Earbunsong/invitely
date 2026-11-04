@@ -88,13 +88,23 @@ export function rowToTemplate(row: TemplateRow): ListedTemplate | null {
 }
 
 /** Built-ins first (in code order), then custom templates by sortOrder/name. Custom rows can't shadow a built-in id. */
-export function mergeTemplates(builtins: Template[], rows: TemplateRow[], opts: { includeDrafts?: boolean; eventType?: EventType } = {}): ListedTemplate[] {
+/** Default music per template id, from the TemplateMusic table. */
+export type MusicMap = Record<string, string>;
+
+export function mergeTemplates(
+  builtins: Template[],
+  rows: TemplateRow[],
+  opts: { includeDrafts?: boolean; eventType?: EventType } = {},
+  music: MusicMap = {},
+): ListedTemplate[] {
   const custom = rows
     .filter((r) => !BUILTIN_IDS.has(r.id) && (opts.includeDrafts || r.status === "PUBLISHED"))
     .map(rowToTemplate)
     .filter((t): t is ListedTemplate => t !== null)
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
-  const all: ListedTemplate[] = [...builtins.map((t, i) => ({ ...t, source: "builtin" as const, status: "PUBLISHED" as const, sortOrder: i })), ...custom];
+  const all: ListedTemplate[] = [...builtins.map((t, i) => ({ ...t, source: "builtin" as const, status: "PUBLISHED" as const, sortOrder: i })), ...custom].map((t) =>
+    music[t.id] ? { ...t, music: music[t.id] } : t,
+  );
   return opts.eventType ? all.filter((t) => t.eventTypes.includes(opts.eventType!)) : all;
 }
 
@@ -104,17 +114,24 @@ export function pickTemplate(id: string, eventType: EventType, candidates: Templ
   return found ?? defaultTemplateFor(eventType);
 }
 
-async function loadRows(): Promise<TemplateRow[]> {
+async function loadRows(): Promise<{ rows: TemplateRow[]; music: MusicMap }> {
   // Imported lazily so the pure helpers above can be unit-tested without a database.
   const { prisma } = await import("./prisma");
-  return prisma.template.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+  const [rows, music] = await Promise.all([prisma.template.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }), prisma.templateMusic.findMany()]);
+  return { rows, music: Object.fromEntries(music.map((m) => [m.templateId, m.url])) };
 }
 
 export async function listTemplates(opts: { includeDrafts?: boolean; eventType?: EventType } = {}): Promise<ListedTemplate[]> {
-  return mergeTemplates(TEMPLATES, await loadRows(), opts);
+  const { rows, music } = await loadRows();
+  return mergeTemplates(TEMPLATES, rows, opts, music);
 }
 
 export async function resolveTemplate(id: string, eventType: EventType): Promise<Template> {
-  if (BUILTIN_IDS.has(id)) return pickTemplate(id, eventType, TEMPLATES);
   return pickTemplate(id, eventType, await listTemplates());
 }
+
+/** A default-music URL must be an uploaded file (Vercel Blob https URL or local /uploads/ in dev). */
+export const musicUrlSchema = z
+  .string()
+  .max(1000)
+  .refine((v) => /^https:\/\//.test(v) || v.startsWith("/uploads/"), "Music must be an uploaded file");

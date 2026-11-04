@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function EditTemplatePage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdmin())) return <AdminLoginForm />;
   const { id } = await params;
-  const row = await prisma.template.findUnique({ where: { id } });
+  const [row, music] = await Promise.all([prisma.template.findUnique({ where: { id } }), prisma.templateMusic.findUnique({ where: { templateId: id } })]);
   const t = row && rowToTemplate(row);
   if (!t) notFound();
   const { theme, cover, coverImage, opening, particles, sections, swatch } = t;
@@ -22,6 +22,7 @@ export default async function EditTemplatePage({ params }: { params: Promise<{ i
         meta: { id: t.id, name: t.name, description: t.description, eventTypes: t.eventTypes },
         config: { theme, cover, coverImage, opening, particles, sections, swatch },
         status: t.status,
+        music: music?.url,
       }}
     />
   );
